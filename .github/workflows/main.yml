@@ -21,10 +21,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install playwright requests
-          # تثبيت المتصفح
-          python -m playwright install chromium
-          # تثبيت تعريفات النظام باستخدام sudo لإعطاء الصلاحيات المطلوبة
-          sudo python -m playwright install-deps 
+          # هذا الأمر السحري يثبت المتصفح وتعريفات النظام مع بعض بدون مشاكل الصلاحيات
+          playwright install --with-deps chromium
 
       - name: Run script
         env:
