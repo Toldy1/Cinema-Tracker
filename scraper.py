@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 import os
 import requests
+import time
 
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
@@ -20,20 +21,24 @@ def check_tickets():
     ]
     target_movies = ["Dune", "Spider-Man", "Doomsday", "Odyssey"]
 
-    # فتح متصفح كروم حقيقي في الخلفية
     with sync_playwright() as p:
-        # headless=True معناها يشتغل في الخلفية بدون واجهة
-        browser = p.chromium.launch(headless=True)
-        # نحطوا معلومات متصفح طبيعي عشان نتخطوا الحماية
-        page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        # إخفاء المتصفح بالكامل عشان ما ينكشفش إنه بوت
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080}
+        )
+        page = context.new_page()
         
         for url in urls:
             try:
-                # يفتح الرابط ويستنى الصفحة تحمل بالكامل
-                page.goto(url, timeout=60000)
-                page.wait_for_load_state("networkidle", timeout=15000)
+                # السر هنا: نطلب منه يقرأ النص بمجرد ظهوره بدون انتظار التحميل الكامل
+                page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                time.sleep(5) # 5 ثواني إضافية احتياط
                 
-                # ياخذ الكود بتاع الصفحة بعد ما تفتح
                 html_content = page.content()
                 
                 found_any = False
