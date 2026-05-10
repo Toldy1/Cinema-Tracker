@@ -1,4 +1,3 @@
-import cloudscraper
 import os
 import requests
 
@@ -15,38 +14,42 @@ def send_telegram_message(message):
         print(f"خطأ في إرسال رسالة تليجرام: {e}")
 
 def check_tickets():
-    # الروابط اللي نبي نتبعها
+    # الروابط المستهدفة
     urls = [
         "https://www.biletiva.com/tags/events?cat=sinema",
         "https://worldcinezone.com.tr/marmaraforum"
     ]
     
-    # الأفلام المستهدفة
+    # الأفلام اللي نراجوا فيها
     target_movies = ["Dune", "Spider-Man", "Doomsday", "Odyssey"]
-    
-    scraper = cloudscraper.create_scraper()
     
     for url in urls:
         try:
-            response = scraper.get(url, timeout=20)
+            # استخدام خدمة allorigins كوسيط لتخطي حظر السيرفرات
+            proxy_url = f"https://api.allorigins.win/get?disableCache=true&url={url}"
+            
+            # حطينا وقت أطول شوية (30 ثانية) لأن الوسيط ياخذ وقت
+            response = requests.get(proxy_url, timeout=30)
             
             if response.status_code == 200:
-                found_any = False
-                for movie in target_movies:
-                    if movie.lower() in response.text.lower():
-                        send_telegram_message(f"🚨 تذاكر فيلم {movie} نزلت! \nالمصدر: {url}")
-                        found_any = True
+                data = response.json()
+                html_content = data.get("contents", "")
                 
-                # لو السكربت شغال وما لقى شي، مش حيدير شي (زي ما طلبت)
-                if not found_any:
-                    print(f"تم فحص {url} - لا توجد تذاكر حالياً.")
-            
+                if html_content:
+                    found_any = False
+                    for movie in target_movies:
+                        if movie.lower() in html_content.lower():
+                            send_telegram_message(f"🚨 تذاكر فيلم {movie} نزلت! \nالمصدر: {url}")
+                            found_any = True
+                    
+                    if not found_any:
+                        print(f"تم فحص {url} بنجاح - لا توجد تذاكر حالياً.")
+                else:
+                    print(f"لم يتم جلب محتوى من {url}")
             else:
-                # لو الموقع عطى خطأ (مثلاً حظر الـ IP)، يبعتلك تنبيه
-                send_telegram_message(f"⚠️ مشكلة في التتبع! الموقع {url} رد بكود خطأ: {response.status_code}")
+                send_telegram_message(f"⚠️ الموقع الوسيط رد بكود خطأ: {response.status_code} للرابط {url}")
 
         except Exception as e:
-            # لو الكود علق أو صار خطأ تقني، يبعتلك السبب
             send_telegram_message(f"❌ خطأ فني في سكربت التتبع للرابط {url}: \n{str(e)}")
 
 if __name__ == "__main__":
