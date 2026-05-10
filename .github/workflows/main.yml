@@ -18,10 +18,9 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies and Browser
+      - name: Install dependencies
         run: |
-          pip install playwright requests
-          playwright install chromium
+          pip install curl-cffi requests
 
       - name: Run script
         env:
