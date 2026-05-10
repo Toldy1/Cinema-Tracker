@@ -16,45 +16,35 @@ def send_telegram_message(message):
 
 async def check_tickets():
     url = "https://worldcinezone.com.tr/marmaraforum"
-    target_movies = ["dune", "backrooms", "odyssey", "mortal kombat", "spider-man"]
+    # قائمة الأفلام اللي تبيها
+    target_movies = ["dune", "backrooms", "the backrooms", "odyssey", "mortal kombat", "spider-man", "spiderman"]
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        # استخدام User Agent حقيقي لتفادي أي حظر
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+        context = await browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         page = await context.new_page()
         
-        try:
-            print(f"جاري فتح الموقع...")
-            # التعديل هنا: الانتظار حتى تحميل الـ DOM فقط لتجنب الـ Timeout
-            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-            
-            # انتظار يدوي لمدة 10 ثواني لضمان ظهور أسماء الأفلام الديناميكية
-            print("الانتظار لظهور محتوى الأفلام...")
-            await page.wait_for_timeout(10000)
-            
-            content = await page.content()
-            content = content.lower()
-
-            found_any = False
-            for movie in target_movies:
-                if movie in content:
-                    send_telegram_message(f"🚨 صيد ناجح! فيلم {movie} نزل في Marmara Forum! \nالرابط: {url}")
-                    print(f"🎯 تم العثور على: {movie}")
-                    found_any = True
-            
-            if not found_any:
-                print("🏁 الفحص تم: الأفلام المطلوبة مزال ما طلعتش.")
-                if "marmara" in content:
-                    print("🔍 تأكيد: البوت قرأ محتوى الصفحة بنجاح.")
+        print(f"جاري فحص الموقع...")
+        await page.goto(url, wait_until="networkidle", timeout=60000)
         
-        except Exception as e:
-            print(f"⚠️ حدث خطأ أثناء الفحص: {e}")
+        # وقت إضافي للتأكد من تحميل المحتوى الديناميكي
+        await page.wait_for_timeout(5000)
         
-        finally:
-            await browser.close()
+        content = await page.content()
+        content = content.lower()
 
-if name == "__main__":
+        found_any = False
+        for movie in target_movies:
+            if movie in content:
+                send_telegram_message(f"🚨 لقيته! فيلم {movie} نزل في Marmara Forum! \nالرابط: {url}")
+                print(f"🎯 تم العثور على: {movie}")
+                found_any = True
+        
+        if not found_any:
+            print("🏁 الفحص انتهى: الأفلام مزال ما نزلتش.")
+        
+        await browser.close()
+
+# السطر هذا هو اللي كان فيه الخطأ في الصورة (تم تصليحه الآن)
+if __name__ == "__main__":
     asyncio.run(check_tickets())
