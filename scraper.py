@@ -12,38 +12,52 @@ def send_telegram_message(message):
     try:
         requests.post(url, json=payload)
     except:
-        print("خطأ في تليجرام")
+        print("Error sending message")
 
 async def check_tickets():
     url = "https://worldcinezone.com.tr/marmaraforum"
-    # ضفنا mortal kombat ii لضمان الصيد
     target_movies = ["dune", "backrooms", "odyssey", "mortal kombat", "spider-man"]
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        # تحديد لغة المتصفح والموقع الجغرافي عشان الموقع يفتح النسخة الصح
-        context = await browser.new_context(locale="tr-TR", user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        # إعدادات إضافية لتسريع التحميل وتجنب التعليق
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            viewport={'width': 1280, 'height': 720}
+        )
         page = await context.new_page()
         
-        print(f"جاري فتح الموقع...")
-        await page.goto(url, wait_until="networkidle", timeout=60000)
-        
-        # الانتظار لثواني إضافية لضمان ظهور البوسترات
-        await page.wait_for_timeout(5000)
-        
-        content = await page.content()
-        content = content.lower()
+        print(f"جاري محاولة فتح الموقع...")
+        try:
+            # التغيير الجوهري هنا: استعملنا domcontentloaded بدل networkidle
+            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+            
+            # نعطوه 10 ثواني "صافية" عشان الـ JavaScript يعرض الأفلام
+            print("وصلنا للكود الأساسي، ننتظر تحميل الأفلام...")
+            await page.wait_for_timeout(10000) 
+            
+            content = await page.content()
+            content = content.lower()
 
-        found_any = False
-        for movie in target_movies:
-            if movie in content:
-                send_telegram_message(f"🚨 صيد ثمين! فيلم {movie} نزل في Marmara Forum! \nالرابط: {url}")
-                print(f"🎯 لقى الفيلم: {movie}")
-                found_any = True
-        
-        if not found_any:
-            print("🏁 الفحص تم: الأفلام المطلوبة مزال ما طلعتش.")
-        
+            found_any = False
+            for movie in target_movies:
+                if movie in content:
+                    send_telegram_message(f"🚨 صيد ثمين! فيلم {movie} نزل في Marmara Forum! \nالرابط: {url}")
+                    print(f"🎯 لقى الفيلم: {movie}")
+                    found_any = True
+            
+            if not found_any:
+                print("🏁 الفحص تم: لم يتم العثور على الأفلام المطلوبة حالياً.")
+                if "marmara" in content:
+                    print("✅ تأكيد: البوت داخل الصفحة بنجاح وقرأ المحتوى.")
+
+        except Exception as e:
+            print(f"⚠️ حدث خطأ أو تأخير: {e}")
+            # حتى لو صار تأخير، نحاولوا نقرأ اللي وصل من الصفحة
+            content = await page.content()
+            if any(movie in content.lower() for movie in target_movies):
+                 print("🎯 لقى الفيلم حتى مع وجود خطأ في التحميل!")
+
         await browser.close()
 
 if __name__ == "__main__":
