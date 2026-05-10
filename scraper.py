@@ -16,8 +16,13 @@ def send_telegram_message(message):
 
 async def check_tickets():
     url = "https://worldcinezone.com.tr/marmaraforum"
-    # القائمة كاملة ومكملة
-    target_movies = ["dune", "backrooms", "the backrooms", "odyssey", "mortal kombat", "spider-man", "spiderman", "michael"]
+    
+    # القائمة الكاملة والنهائية (مع إضافة doomsday)
+    target_movies = [
+        "dune", "backrooms", "the backrooms", "odyssey", 
+        "mortal kombat", "spider-man", "spiderman", 
+        "michael", "doomsday"
+    ]
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -25,12 +30,13 @@ async def check_tickets():
         page = await context.new_page()
         
         try:
-            print(f"جاري محاولة فتح الموقع...")
-            # غيرنا الإعداد لـ 'domcontentloaded' عشان يقرأ الكود بسرعة وما يستناش الصور الثقيلة
-            await page.goto(url, wait_until="domcontentloaded", timeout=90000)
+            print(f"بدء الفحص بصبر طويل (3 دقائق)...")
+            # الانتظار حتى تحميل الصفحة بالكامل
+            await page.goto(url, wait_until="load", timeout=180000)
             
-            # استراحة قصيرة للتأكد من ظهور الأسماء
-            await page.wait_for_timeout(5000)
+            # النزول لأسفل الصفحة لضمان تحميل كل الأفلام الديناميكية
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await page.wait_for_timeout(10000) # استراحة 10 ثواني للتحميل الكامل
             
             content = await page.content()
             content = content.lower()
@@ -38,15 +44,15 @@ async def check_tickets():
             found_any = False
             for movie in target_movies:
                 if movie in content:
-                    send_telegram_message(f"🚨 صيد ثمين! فيلم {movie} نزل في Marmara Forum! \nالرابط: {url}")
-                    print(f"🎯 لقى: {movie}")
+                    send_telegram_message(f"🚨 صيد جديد! فيلم {movie} نزل في Marmara Forum! \nالرابط: {url}")
+                    print(f"🎯 تم العثور على: {movie}")
                     found_any = True
             
             if not found_any:
-                print("🏁 الفحص تم: مالقيتش الأفلام المطلوبة حالياً.")
+                print("🏁 الفحص انتهى: الأفلام المطلوبة مزال ما نزلتش.")
 
         except Exception as e:
-            print(f"⚠️ الموقع علّق المرة هذه (Timeout). حيجرب المرة الجاية تلقائياً. الخطأ: {e}")
+            print(f"⚠️ الموقع علّق المرة هذه (Timeout). حيجرب تلقائياً بعد نص ساعة. الخطأ: {e}")
         
         finally:
             await browser.close()
