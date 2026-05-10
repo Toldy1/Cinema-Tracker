@@ -2,7 +2,6 @@ name: Biletiva Monitor
 
 on:
   schedule:
-    # التعديل الجديد: يشتغل كل 30 دقيقة
     - cron: '*/30 * * * *'
   workflow_dispatch: 
 
@@ -21,7 +20,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests
+          pip install playwright requests
+          playwright install chromium
 
       - name: Run script
         env:
