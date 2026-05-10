@@ -1,6 +1,7 @@
 import os
 import requests
 
+# جلب البيانات من الإعدادات السرية في GitHub
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
 
@@ -13,48 +14,38 @@ def send_telegram_message(message):
         print(f"Error sending to telegram: {e}")
 
 def check_tickets():
-    urls = [
-        "https://www.biletiva.com/sitemap.xml",
-        "https://www.biletiva.com/tags/events?cat=sinema",
-        "https://worldcinezone.com.tr/marmaraforum"
-    ]
+    # ركزنا هنا على الرابط اللي يفتح معاك بنجاح
+    url = "https://worldcinezone.com.tr/marmaraforum"
     
+    # قائمة الأفلام بكل الاحتمالات (سمول لتر)
     target_movies = ["dune", "spider-man", "spiderman", "doomsday", "odyssey"]
+    
+    # هيدرز بسيطة عشان نبانوا كأننا متصفح عادي
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
 
-    # استخدام بروكسي مجاني لتخطي حظر الـ IP
-    # المواقع هذي بتجيب المحتوى كأنك داخل من مكان ثاني تماماً
-    proxy_gateways = [
-        "https://api.allorigins.win/get?url=",
-        "https://api.codetabs.com/v1/proxy/?quest="
-    ]
-
-    for url in urls:
-        success = False
-        # نجربوا البروكسيات بالواحد لين يفتح الموقع
-        for gateway in proxy_gateways:
-            try:
-                proxy_url = f"{gateway}{url}"
-                response = requests.get(proxy_url, timeout=30)
-                
-                if response.status_code == 200:
-                    html_content = response.text.lower()
-                    
-                    found_any = False
-                    for movie in target_movies:
-                        if movie in html_content:
-                            send_telegram_message(f"🚨 تنبيه: تم رصد صفحة لفيلم {movie}! \nالمصدر: {url}")
-                            found_any = True
-                    
-                    if not found_any:
-                        print(f"تم فحص {url} بنجاح عبر الوسيط - لا توجد تذاكر.")
-                    
-                    success = True
-                    break # نجح الفحص، ننتقل للرابط اللي بعده
-            except:
-                continue
+    try:
+        print(f"بدء فحص سينما Marmara Forum...")
+        response = requests.get(url, headers=headers, timeout=30)
         
-        if not success:
-            print(f"فشل الوصول للرابط {url} حتى عبر الوسائط.")
+        if response.status_code == 200:
+            html_content = response.text.lower()
+            
+            found_any = False
+            for movie in target_movies:
+                if movie in html_content:
+                    send_telegram_message(f"🚨 عاااجل: تذاكر فيلم {movie} نزلت في Marmara Forum! \nالرابط: {url}")
+                    print(f"لقيت الفيلم: {movie}")
+                    found_any = True
+            
+            if not found_any:
+                print("الفحص تم بنجاح: الفيلم مزال ما نزلش في القائمة.")
+        else:
+            print(f"فشل الوصول للموقع، كود الحالة: {response.status_code}")
+
+    except Exception as e:
+        print(f"حدث خطأ أثناء الاتصال: {e}")
 
 if __name__ == "__main__":
     check_tickets()
