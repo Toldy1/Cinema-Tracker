@@ -1,4 +1,4 @@
-name: Biletiva Monitor
+name: Cinema Monitor
 
 on:
   schedule:
@@ -21,7 +21,6 @@ jobs:
       - name: Install dependencies
         run: |
           pip install playwright requests
-          # هذا الأمر السحري يثبت المتصفح وتعريفات النظام مع بعض بدون مشاكل الصلاحيات
           playwright install --with-deps chromium
 
       - name: Run script
