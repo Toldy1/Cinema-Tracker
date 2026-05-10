@@ -2,7 +2,6 @@ name: Biletiva Monitor
 
 on:
   schedule:
-    # يشتغل كل 3 ساعات
     - cron: '0 */3 * * *'
   workflow_dispatch: 
 
@@ -19,9 +18,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install dependencies and Browser
         run: |
-          pip install cloudscraper requests
+          pip install playwright requests
+          playwright install chromium
 
       - name: Run script
         env:
