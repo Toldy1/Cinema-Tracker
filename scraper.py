@@ -1,7 +1,7 @@
+from playwright.sync_api import sync_playwright
 import os
 import requests
 
-# جلب بيانات تليجرام من الأسرار
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
 
@@ -11,46 +11,44 @@ def send_telegram_message(message):
     try:
         requests.post(url, json=payload)
     except Exception as e:
-        print(f"خطأ في إرسال رسالة تليجرام: {e}")
+        print(f"Error sending to telegram: {e}")
 
 def check_tickets():
-    # الروابط المستهدفة
     urls = [
         "https://www.biletiva.com/tags/events?cat=sinema",
         "https://worldcinezone.com.tr/marmaraforum"
     ]
-    
-    # الأفلام اللي نراجوا فيها
     target_movies = ["Dune", "Spider-Man", "Doomsday", "Odyssey"]
-    
-    for url in urls:
-        try:
-            # استخدام خدمة allorigins كوسيط لتخطي حظر السيرفرات
-            proxy_url = f"https://api.allorigins.win/get?disableCache=true&url={url}"
-            
-            # حطينا وقت أطول شوية (30 ثانية) لأن الوسيط ياخذ وقت
-            response = requests.get(proxy_url, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
-                html_content = data.get("contents", "")
-                
-                if html_content:
-                    found_any = False
-                    for movie in target_movies:
-                        if movie.lower() in html_content.lower():
-                            send_telegram_message(f"🚨 تذاكر فيلم {movie} نزلت! \nالمصدر: {url}")
-                            found_any = True
-                    
-                    if not found_any:
-                        print(f"تم فحص {url} بنجاح - لا توجد تذاكر حالياً.")
-                else:
-                    print(f"لم يتم جلب محتوى من {url}")
-            else:
-                send_telegram_message(f"⚠️ الموقع الوسيط رد بكود خطأ: {response.status_code} للرابط {url}")
 
-        except Exception as e:
-            send_telegram_message(f"❌ خطأ فني في سكربت التتبع للرابط {url}: \n{str(e)}")
+    # فتح متصفح كروم حقيقي في الخلفية
+    with sync_playwright() as p:
+        # headless=True معناها يشتغل في الخلفية بدون واجهة
+        browser = p.chromium.launch(headless=True)
+        # نحطوا معلومات متصفح طبيعي عشان نتخطوا الحماية
+        page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        
+        for url in urls:
+            try:
+                # يفتح الرابط ويستنى الصفحة تحمل بالكامل
+                page.goto(url, timeout=60000)
+                page.wait_for_load_state("networkidle", timeout=15000)
+                
+                # ياخذ الكود بتاع الصفحة بعد ما تفتح
+                html_content = page.content()
+                
+                found_any = False
+                for movie in target_movies:
+                    if movie.lower() in html_content.lower():
+                        send_telegram_message(f"🚨 تذاكر فيلم {movie} نزلت! \nالمصدر: {url}")
+                        found_any = True
+                        
+                if not found_any:
+                    print(f"تم فحص {url} بنجاح كمتصفح حقيقي - لا توجد تذاكر حالياً.")
+                    
+            except Exception as e:
+                send_telegram_message(f"❌ خطأ مع {url}: \n{str(e)}")
+        
+        browser.close()
 
 if __name__ == "__main__":
     check_tickets()
