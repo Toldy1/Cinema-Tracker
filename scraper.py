@@ -1,6 +1,7 @@
 import os
+import asyncio
+from playwright.async_api import async_playwright
 import requests
-import re
 
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
@@ -8,52 +9,35 @@ CHAT_ID = os.environ.get('CHAT_ID')
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message}
-    try:
-        requests.post(url, json=payload)
-    except Exception as e:
-        print(f"Error: {e}")
+    requests.post(url, json=payload)
 
-def check_tickets():
+async def check_tickets():
     url = "https://worldcinezone.com.tr/marmaraforum"
-    
-    # القائمة المحدثة بجميع الأفلام المطلوبة
-    target_movies = [
-        "dune", "spider-man", "spiderman", "doomsday", 
-        "backrooms", "the backrooms",
-        "odyssey", "the odyssey",
-        "mortal kombat", "mortal kombat 2", "mortal kombat ii"
-    ]
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept": "*/*",
-        "X-Requested-With": "XMLHttpRequest"
-    }
+    target_movies = ["dune", "backrooms", "odyssey", "mortal kombat", "spider-man"]
 
-    try:
-        response = requests.get(url, headers=headers, timeout=30)
-        if response.status_code == 200:
-            html_content = response.text.lower()
-            
-            print(f"✅ تم فحص الصفحة بنجاح.")
+    async with async_playwright() as p:
+        # فتح متصفح مجهول
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        
+        print(f"جاري فتح الموقع بمتصفح حقيقي...")
+        await page.goto(url, wait_until="networkidle")
+        
+        # استخراج كل النصوص من الصفحة بعد ما حملت بالكامل
+        content = await page.content()
+        content = content.lower()
 
-            found_any = False
-            for movie in target_movies:
-                # استخدام re.search للبحث عن الكلمة كنمط مستقل
-                if re.search(rf"\b{movie}\b", html_content) or movie in html_content:
-                    send_telegram_message(f"🚨 عاجل: تذاكر فيلم {movie} نزلت في Marmara Forum! \nالرابط: {url}")
-                    print(f"🎯 لقى الفيلم: {movie}")
-                    found_any = True
-            
-            if not found_any:
-                print("🏁 الفحص انتهى: الأفلام المطلوبة غير موجودة حالياً.")
-                # تأكيد الدخول للصفحة
-                if "marmara" in html_content:
-                    print("🔍 تأكيد: البوت يقرأ صفحة Marmara Forum بنجاح.")
-        else:
-            print(f"❌ خطأ في الموقع: {response.status_code}")
-    except Exception as e:
-        print(f"⚠️ خطأ تقني: {e}")
+        found_any = False
+        for movie in target_movies:
+            if movie in content:
+                send_telegram_message(f"🚨 صيد ثمين! فيلم {movie} نزل في Marmara Forum! \nالرابط: {url}")
+                print(f"🎯 لقى الفيلم: {movie}")
+                found_any = True
+        
+        if not found_any:
+            print("🏁 الفحص انتهى: الأفلام مزال ما طلعتش في المتصفح.")
+        
+        await browser.close()
 
 if __name__ == "__main__":
-    check_tickets()
+    asyncio.run(check_tickets())
