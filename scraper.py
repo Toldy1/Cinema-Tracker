@@ -3,7 +3,6 @@ import requests
 
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHAT_ID = os.environ.get('CHAT_ID')
-# مفتاح ScraperAPI بتاعك
 SCRAPER_API_KEY = "85461d0ec7d5dc5095eca191d8d2aece"
 
 def send_telegram_message(message):
@@ -23,11 +22,11 @@ def check_tickets():
 
     for url in urls:
         try:
-            # نمرروا الرابط عن طريق سيرفرات ScraperAPI
-            api_url = f"http://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}"
+            # ضفنا render=true و premium=true لكسر حماية الجافا سكريبت
+            api_url = f"http://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={url}&render=true&premium=true"
             
-            # خلينا الوقت 60 ثانية لأن الوسيط ياخذ وقت باش يجيب الصفحة
-            response = requests.get(api_url, timeout=60)
+            # زدنا الوقت لـ 90 ثانية لأن المتصفح الوسيط ياخذ وقت باش يحل اللغز
+            response = requests.get(api_url, timeout=90)
             
             if response.status_code == 200:
                 html_content = response.text
