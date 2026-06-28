@@ -19,7 +19,7 @@ async def check_tickets():
     
     # القائمة الكاملة والنهائية (مع إضافة doomsday)
     target_movies = [
-        "dune", "odyssey", "spider-man", "spiderman", "doomsday"
+        "dune", "spider-man", "spiderman", "doomsday"
     ]
 
     async with async_playwright() as p:
