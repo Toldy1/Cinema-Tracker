@@ -15,7 +15,7 @@ def send_telegram_message(message):
         print("خطأ في تليجرام")
 
 async def check_tickets():
-    url = "https://worldcinezone.com.tr/marmaraforum"
+    url = "https://www.worldcinezone.com.tr/"
     
     # القائمة الكاملة والنهائية (مع إضافة doomsday)
     target_movies = [
