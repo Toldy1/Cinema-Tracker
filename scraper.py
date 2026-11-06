@@ -21,59 +21,47 @@ async def check_tickets():
 
   async with async_playwright() as p:
     browser = await p.chromium.launch(headless=True)
-    # تحسين الـ User-Agent لتجنب الحظر
     context = await browser.new_context(
         user_agent=(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            " (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            " (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         )
     )
     page = await context.new_page()
 
     try:
       print("🔍 بدء الفحص لصفحة فيلم Dune في باثي تونس...")
-      await page.goto(url, wait_until="load", timeout=180000)
+      await page.goto(url, wait_until="domcontentloaded", timeout=180000)
 
-      # 1. طباعة عنوان الصفحة للتأكد هل تم فتحها أم حظرنا؟
-      page_title = await page.title()
-      print(f"📌 عنوان الصفحة الحالي: {page_title}")
-
-      # النزول لأسفل الصفحة لضمان تحميل المحتوى بالكامل
-      await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+      # الانتظار قليلاً لضمان استقرار محتوى الصفحة بالكامل
       await page.wait_for_timeout(8000)
 
       content = await page.content()
       content_lower = content.lower()
 
-      # 2. طباعة عينة من محتوى الصفحة في السجلات لنرى ماذا قرأ السيرفر
-      print(
-          "📄 عينة من محتوى الصفحة (أول 350 حرف):"
-          f" {content_lower[:350]}..."
-      )
-
-      # فحص الحظر الأمني
-      if "just a moment" in content_lower or "access denied" in content_lower:
-        print("⚠️ تنبيه: نظام حماية الموقع (Cloudflare) قام بحظر السيرفر!")
+      # 1. صمام أمان: التأكد أننا في صفحة الفيلم الحقيقية وليست صفحة خطأ أو فارغة
+      if "dune" not in content_lower or "pathe" not in content_lower:
+        print(
+            "⚠️ تنبيه: الصفحة الحالية لا تبدو كصفحة الفيلم المطلوبة، سنحاول لاحقاً."
+        )
         return
 
-      # العبارة المستهدفة
+      # 2. الجملة المستهدفة للبحث
       not_showing_phrase = "this movie is not yet showing in cinemas"
 
-      # الشرط: هل العبارة غير موجودة؟
-      if not_showing_phrase not in content_lower:
+      # 3. الشرط الحقيقي والمضبوط بدقة
+      if not_showing_phrase in content_lower:
+        print(
+            "⏳ الفيلم ما زال غير متاح للحجز (جملة عدم العرض موجودة ومؤكدة)."
+        )
+      else:
+        # إذا اختفت الجملة حقاً، يتم إرسال التنبيه الحقيقي
         alert_msg = (
             "🚨 تنبيه عاجل: تم إزالة جملة عدم العرض من صفحة Dune في"
             f" باثي!\nقد يكون الحجز قد فتح الآن 🎟️🔥\nالرابط:\n{url}"
         )
-        # لتجنب إزعاجك في الاختبارات القادمة اذا كانت العبارة موجودة فعلاً:
-        # سنقوم بإرسال التنبيه فقط إذا متأكدين، لكن اترك هذا الشرط الآن لنرى السجلات
         send_telegram_message(alert_msg)
-        print("🎉 تم كشف تغيير في الصفحة وإرسال التنبيه على تيليجرام!")
-      else:
-        print(
-            "⏳ الفيلم ما زال غير متاح للحجز (جملة عدم العرض لا تزال موجودة في"
-            " الصفحة بصورة سليمة)."
-        )
+        print("🎉 تم كشف التغيير الحقيقي وإرسال التنبيه على تيليجرام!")
 
     except Exception as e:
       print(f"⚠️ حدث خطأ أثناء التصفح: {e}")
