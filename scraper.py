@@ -13,49 +13,73 @@ def send_telegram_message(message):
   try:
     requests.post(url, json=payload)
   except:
-    print("خطأ في تلجرام")
+    print("خطأ في تيليجرام")
 
 
 async def check_tickets():
   url = "https://www.pathe.tn/en/films/dune-troisieme-partie-55711"
 
   async with async_playwright() as p:
-    browser = await p.chromium.launch(headless=True)
+    # إطلاق المتصفح مع تمرير بارامترات تمنع الكشف الأمني
+    browser = await p.chromium.launch(
+        headless=True,
+        args=[
+            "--disable-blink-features=AutomationControlled",
+            "--disable-infobars",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--window-size=1920,1080",
+        ],
+    )
+
     context = await browser.new_context(
         user_agent=(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             " (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        )
+        ),
+        viewport={"width": 1920, "height": 1080},
+        locale="en-US",
+        timezone_id="Africa/Tunis",
     )
+
+    # **الحيلة الأهم:** حذف علامة الأتمتة من المتصفح لخدع نظام الحماية
+    await context.add_init_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
+
     page = await context.new_page()
 
     try:
-      print("🔍 بدء الفحص لصفحة فيلم Dune في باثي تونس...")
-      await page.goto(url, wait_until="domcontentloaded", timeout=180000)
+      print("🔍 بدء الفحص المحصن لصفحة فيلم Dune في باثي تونس...")
+      # استخدام وضع العرض العادي مع مهلة أطول واستقرار شبكي
+      await page.goto(
+          url, wait_until="domcontentloaded", timeout=180000
+      )
 
-      # الانتظار قليلاً لضمان استقرار محتوى الصفحة بالكامل
-      await page.wait_for_timeout(8000)
+      # محاكاة سلوك بشري طفيف (حركة عشوائية أو انتظار تفاعلي)
+      await page.wait_for_timeout(10000)
 
       content = await page.content()
       content_lower = content.lower()
 
-      # 1. صمام أمان: التأكد أننا في صفحة الفيلم الحقيقية وليست صفحة خطأ أو فارغة
+      # صمام الأمان المزدوج: التأكد من أن الصفحة حملت المحتوى البشري المطلوب
       if "dune" not in content_lower or "pathe" not in content_lower:
         print(
-            "⚠️ تنبيه: الصفحة الحالية لا تبدو كصفحة الفيلم المطلوبة، سنحاول لاحقاً."
+            "⚠️ تنبيه: لا تزال الحماية تمنع الوصول أو أن الصفحة لم تحمل بالكامل."
         )
         return
 
-      # 2. الجملة المستهدفة للبحث
+      # الجملة المستهدفة للبحث
       not_showing_phrase = "this movie is not yet showing in cinemas"
 
-      # 3. الشرط الحقيقي والمضبوط بدقة
       if not_showing_phrase in content_lower:
         print(
             "⏳ الفيلم ما زال غير متاح للحجز (جملة عدم العرض موجودة ومؤكدة)."
         )
       else:
-        # إذا اختفت الجملة حقاً، يتم إرسال التنبيه الحقيقي
+        # إذا اختفت الجملة حقاً وبشكل مؤكد
         alert_msg = (
             "🚨 تنبيه عاجل: تم إزالة جملة عدم العرض من صفحة Dune في"
             f" باثي!\nقد يكون الحجز قد فتح الآن 🎟️🔥\nالرابط:\n{url}"
