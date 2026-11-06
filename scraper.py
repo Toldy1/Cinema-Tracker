@@ -41,7 +41,7 @@ async def check_tickets():
       content_lower = content.lower()
 
       # الجملة الحالية التي تدل على أن الفيلم لم يبدأ عرضه بعد
-      not_showing_phrase = "This movie is not yet showing in cinemas"
+      not_showing_phrase = "this movie is not yet showing in cinemas"
 
       # الشرط: إذا اختفت هذه الجملة من الصفحة، فهذا يعني أن الحجز قد فتح!
       if not_showing_phrase not in content_lower:
