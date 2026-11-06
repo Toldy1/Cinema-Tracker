@@ -15,7 +15,7 @@ def send_telegram_message(message):
         print("خطأ في تليجرام")
 
 async def check_tickets():
-    url = "https://www.worldcinezone.com.tr/"
+    url = "https://www.pathe.tn/en/films/dune-troisieme-partie-55711"
     
     # القائمة الكاملة والنهائية (مع إضافة doomsday)
     target_movies = [
