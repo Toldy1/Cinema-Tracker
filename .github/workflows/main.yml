@@ -1,7 +1,7 @@
 name: Cinema Monitor
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,8 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install playwright requests
-          playwright install --with-deps chromium
+          pip install curl_cffi beautifulsoup4 requests
 
       - name: Run script
         env:
