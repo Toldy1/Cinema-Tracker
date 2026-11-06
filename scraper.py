@@ -42,7 +42,7 @@ def check_tickets():
       return
 
     # الجملة المستهدفة للبحث
-    not_showing_phrase = "test"
+    not_showing_phrase = "t5hebud538hdbiest"
 
     if not_showing_phrase in content_lower:
       print("⏳ الفيلم ما زال غير متاح للحجز (جملة عدم العرض موجودة ومؤكدة).")
